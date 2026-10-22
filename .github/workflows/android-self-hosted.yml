@@ -42,7 +42,33 @@ jobs:
           java-version: '17'
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        shell: bash
+        run: |
+          set -eu
+          sdk_root="$HOME/android-sdk"
+          cmdline_tools_archive="$RUNNER_TEMP/commandlinetools-linux-11076708_latest.zip"
+
+          mkdir -p "$sdk_root/cmdline-tools"
+          wget -q "https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip" \
+            -O "$cmdline_tools_archive"
+          unzip -q "$cmdline_tools_archive" -d "$RUNNER_TEMP/android-commandlinetools"
+          mkdir -p "$sdk_root/cmdline-tools/latest"
+          mv "$RUNNER_TEMP/android-commandlinetools/cmdline-tools/"* "$sdk_root/cmdline-tools/latest/"
+
+          {
+            echo "ANDROID_HOME=$sdk_root"
+            echo "ANDROID_SDK_ROOT=$sdk_root"
+          } >> "$GITHUB_ENV"
+          {
+            echo "$sdk_root/cmdline-tools/latest/bin"
+            echo "$sdk_root/platform-tools"
+          } >> "$GITHUB_PATH"
+          export ANDROID_HOME="$sdk_root"
+          export ANDROID_SDK_ROOT="$sdk_root"
+          export PATH="$sdk_root/cmdline-tools/latest/bin:$sdk_root/platform-tools:$PATH"
+
+          yes | sdkmanager --licenses
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
       - name: Validate Tasker integration contracts
         run: python3 tools/hil/validate_tasker_profiles.py
